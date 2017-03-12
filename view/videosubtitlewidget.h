@@ -1,12 +1,12 @@
 #ifndef VIDEOSUBTITLEWIDGET_H
 #define VIDEOSUBTITLEWIDGET_H
 
-
-#include <QVideoWidget>
+#include <QGraphicsView>
 #include "lib/subtitleitem.h"
 
 class QLabel;
-class VideoSubtitleWidget : public QVideoWidget
+class QGraphicsVideoItem;
+class VideoSubtitleWidget : public QGraphicsView
 {
     Q_OBJECT
 public:
@@ -15,12 +15,17 @@ public:
     SubtitleItem currentSubtitleItem() const;
     void setCurrentSubtitleItem(const SubtitleItem& currentSubtitleItem);
 
+    QGraphicsVideoItem* graphicsVideoItem();
+
 private:
+    void setupUi();
+
     QImage generateSubtitleImage();
 
 private:
     SubtitleItem m_currentSubtitleItem;
-    QLabel* m_lblSubTitle = nullptr;
+    QGraphicsScene* m_graphicsScene = nullptr;
+    QGraphicsVideoItem* m_graphicsVideoItem = nullptr;
 
     // QWidget interface
 protected:

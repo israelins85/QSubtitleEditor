@@ -4,28 +4,18 @@
 #include <QPainter>
 #include <QEasingCurve>
 #include <QDebug>
+#include <QGraphicsVideoItem>
 
-VideoSubtitleWidget::VideoSubtitleWidget(QWidget *parent) : QVideoWidget(parent)
+VideoSubtitleWidget::VideoSubtitleWidget(QWidget *parent) : QGraphicsView(parent)
 {
-    m_lblSubTitle = new QLabel(this);
-    m_lblSubTitle->setStyleSheet("background-color: rgba(255, 150, 150, 150);");
+    setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
+    setStyleSheet( "VideoSubtitleWidget { border-style: none; background-color:black}" );
+
+    setupUi();
 }
-
-//void VideoSubtitleWidget::paintEvent(QPaintEvent* event)
-//{
-//    QVideoWidget::paintEvent(event);
-
-//    QImage l_image = generateSubtitleImage();
-//    QRect l_rectSource = QRect(QPoint(0, 0), l_image.size());
-//    QRect l_rectTarget = l_rectSource;
-
-//    l_rectTarget.setTop((height() - l_rectTarget.height()) / 2);
-//    l_rectTarget.setLeft((width() - l_rectTarget.width()) / 2);
-
-//    QPainter painter(this);
-//    painter.setRenderHint(QPainter::Antialiasing);
-//    painter.drawImage(l_rectTarget, l_image, l_rectSource);
-//}
 
 SubtitleItem VideoSubtitleWidget::currentSubtitleItem() const
 {
@@ -36,9 +26,25 @@ void VideoSubtitleWidget::setCurrentSubtitleItem(const SubtitleItem& currentSubt
 {
     if (m_currentSubtitleItem != currentSubtitleItem) {
         m_currentSubtitleItem = currentSubtitleItem;
-        m_lblSubTitle->setPixmap(QPixmap::fromImage(generateSubtitleImage()));
+//        m_lblSubTitle->setPixmap(QPixmap::fromImage(generateSubtitleImage()));
     }
-//    update();
+//    m_lblSubTitle->raise();
+    //    update();
+}
+
+QGraphicsVideoItem* VideoSubtitleWidget::graphicsVideoItem()
+{
+    return m_graphicsVideoItem;
+}
+
+void VideoSubtitleWidget::setupUi()
+{
+    m_graphicsScene = new QGraphicsScene(this);
+    m_graphicsVideoItem = new QGraphicsVideoItem;
+    m_graphicsVideoItem->setAspectRatioMode(Qt::KeepAspectRatio);
+    m_graphicsScene->addItem(m_graphicsVideoItem);
+
+    setScene(m_graphicsScene);
 }
 
 QImage makeSmoothTransparent(const QImage& a_image, QRgb a_backgroundColor, qint32 a_outline)
@@ -87,7 +93,7 @@ QImage VideoSubtitleWidget::generateSubtitleImage()
     bool l_needRegenerate = ((m_currentSubtitleItem != sl_cachedItem) || (sl_txtPixmap.size() != size()));
     if (l_needRegenerate) {
         sl_cachedItem = m_currentSubtitleItem;
-        QRect l_rect = QRect(QPoint(0, 0), m_lblSubTitle->size());
+        QRect l_rect = QRect(QPoint(0, 0), size());
 
         if (sl_txtPixmap.size() != l_rect.size())
             sl_txtPixmap = QImage(l_rect.size(), QImage::Format_ARGB32_Premultiplied);
@@ -127,10 +133,6 @@ void VideoSubtitleWidget::resizeEvent(QResizeEvent* /*event*/)
 {
     if (!size().isValid()) return;
 
-    QRect l_rect = QRect(QPoint(0, 0), size() * 0.9);
-    l_rect.moveCenter(mapFromParent(geometry().center()));
-    qDebug() << l_rect;
-    m_lblSubTitle->setGeometry(l_rect);
-    m_lblSubTitle->setPixmap(QPixmap::fromImage(generateSubtitleImage()));
-    m_lblSubTitle->raise();
+    setSceneRect(QRect(QPoint(0, 0), size()));
+    m_graphicsVideoItem->setSize(size());
 }

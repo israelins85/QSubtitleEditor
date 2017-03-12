@@ -13,17 +13,15 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    ui->wdgVideo->setAspectRatioMode(Qt::KeepAspectRatio);
-
     m_mediaPlayer = new QMediaPlayer(this);
-    m_mediaPlayer->setVideoOutput(ui->wdgVideo);
+    m_mediaPlayer->setVideoOutput(ui->wdgVideo->graphicsVideoItem());
 
     connect(m_mediaPlayer, &QMediaPlayer::durationChanged, ui->sliProgress, [this](qint64 a_position) {
         ui->sliProgress->setMaximum(int(a_position / 1000));
-        ui->wdgVideo->setMaximumSize(0, 0);
-        QTimer::singleShot(100, this, [=]() {
-            ui->wdgVideo->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-        });
+//        ui->wdgVideo->setMaximumSize(0, 0);
+//        QTimer::singleShot(100, this, [=]() {
+//            ui->wdgVideo->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+//        });
     });
 
     connect(m_mediaPlayer, &QMediaPlayer::positionChanged, ui->sliProgress, [this](qint64 a_position) {

@@ -23,18 +23,18 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
-    subtitleitem.cpp \
-    subtitle.cpp \
-    subtitleparser.cpp \
-    subtitleparsersrt.cpp \
-    videosubtitlewidget.cpp
+        view/mainwindow.cpp \
+        view/videosubtitlewidget.cpp \
+    lib/subtitleitem.cpp \
+    lib/subtitle.cpp \
+    lib/subtitleparser.cpp \
+    lib/subtitleparsersrt.cpp
 
-HEADERS  += mainwindow.h \
-    subtitleitem.h \
-    subtitle.h \
-    subtitleparser.h \
-    subtitleparsersrt.h \
-    videosubtitlewidget.h
+HEADERS  += view/mainwindow.h \
+    view/videosubtitlewidget.h \
+    lib/subtitleitem.h \
+    lib/subtitle.h \
+    lib/subtitleparser.h \
+    lib/subtitleparsersrt.h
 
-FORMS    += mainwindow.ui
+FORMS    += view/mainwindow.ui

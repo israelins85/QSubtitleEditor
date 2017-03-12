@@ -1,7 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "subtitle.h"
+#include "lib/subtitle.h"
 
 #include <QMainWindow>
 #include <QMediaPlayer>

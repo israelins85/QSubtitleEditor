@@ -1,9 +1,9 @@
 #ifndef VIDEOSUBTITLEWIDGET_H
 #define VIDEOSUBTITLEWIDGET_H
 
-#include "subtitleitem.h"
 
 #include <QVideoWidget>
+#include "lib/subtitleitem.h"
 
 class QLabel;
 class VideoSubtitleWidget : public QVideoWidget

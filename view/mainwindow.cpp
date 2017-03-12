@@ -1,5 +1,5 @@
 #include "mainwindow.h"
-#include "subtitleparser.h"
+#include "lib/subtitleparser.h"
 #include "ui_mainwindow.h"
 
 #include <QTimer>

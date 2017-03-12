@@ -368,7 +368,7 @@
   <customwidget>
    <class>VideoSubtitleWidget</class>
    <extends>QWidget</extends>
-   <header>videosubtitlewidget.h</header>
+   <header>view/videosubtitlewidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

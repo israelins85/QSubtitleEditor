@@ -4,11 +4,77 @@
 #include <QPainter>
 #include <QEasingCurve>
 #include <QDebug>
+#include <QAbstractVideoSurface>
+#include <QVideoSurfaceFormat>
 
-VideoSubtitleWidget::VideoSubtitleWidget(QWidget *parent) : QVideoWidget(parent)
+class VideoSurface : public QAbstractVideoSurface
 {
+public:
+    VideoSurface() {}
+
+    // QAbstractVideoSurface interface
+    virtual QList<QVideoFrame::PixelFormat> supportedPixelFormats(QAbstractVideoBuffer::HandleType handleType) const override
+    {
+        qDebug() << "supportedPixelFormats" << handleType;
+        if (handleType == QAbstractVideoBuffer::NoHandle) {
+            return {
+                QVideoFrame::Format_RGB32,
+                QVideoFrame::Format_ARGB32,
+                QVideoFrame::Format_ARGB32_Premultiplied,
+                QVideoFrame::Format_RGB565,
+                QVideoFrame::Format_RGB555
+            };
+        } else {
+            return {};
+        }
+    }
+
+    virtual bool isFormatSupported(const QVideoSurfaceFormat &format) const override
+    {
+        const QImage::Format imageFormat = QVideoFrame::imageFormatFromPixelFormat(format.pixelFormat());
+        const QSize size = format.frameSize();
+
+        return imageFormat != QImage::Format_Invalid
+            && !size.isEmpty()
+            && format.handleType() == QAbstractVideoBuffer::NoHandle;
+    }
+
+    virtual bool present(const QVideoFrame& frame) override
+    {
+        QImage l_imgFrame;
+        QVideoFrame l_frame(frame);
+        if (l_frame.map(QAbstractVideoBuffer::ReadOnly)) {
+            QImage::Format imageFormat = QVideoFrame::imageFormatFromPixelFormat(frame.pixelFormat());
+            if (imageFormat != QImage::Format_Invalid) {
+                l_imgFrame = QImage(frame.bits(), frame.width(), frame.height()/*, frame.bytesPerLine()*/, imageFormat);
+            } else
+            if (frame.pixelFormat() == QVideoFrame::Format_Jpeg) {
+                // e.g. JPEG
+                l_imgFrame = QImage::fromData(frame.bits(), frame.mappedBytes());
+            }
+            l_frame.unmap();
+            qDebug() << "present imageFormat" << imageFormat
+                     << "frame.pixelFormat()" << frame.pixelFormat()
+                     << "l_imgFrame.isNull()" << l_imgFrame.isNull();
+        }
+        fn_newFrameAvaibleCallBack(l_imgFrame);
+
+        return true;
+    }
+
+    std::function<void (const QImage& a_image)> fn_newFrameAvaibleCallBack;
+};
+
+
+VideoSubtitleWidget::VideoSubtitleWidget(QWidget *parent) : QWidget(parent)
+{
+    m_lblVideo = new QLabel(this);
+    m_lblVideo->setStyleSheet("background-color: rgb(0, 0, 0);");
+
     m_lblSubTitle = new QLabel(this);
-    m_lblSubTitle->setStyleSheet("background-color: rgba(255, 150, 150, 150);");
+    m_lblSubTitle->setStyleSheet("background-color: rgba(255, 255, 255, 0);");
+
+    Q_UNUSED(surface());
 }
 
 //void VideoSubtitleWidget::paintEvent(QPaintEvent* event)
@@ -38,7 +104,21 @@ void VideoSubtitleWidget::setCurrentSubtitleItem(const SubtitleItem& currentSubt
         m_currentSubtitleItem = currentSubtitleItem;
         m_lblSubTitle->setPixmap(QPixmap::fromImage(generateSubtitleImage()));
     }
-//    update();
+    //    update();
+}
+
+QAbstractVideoSurface* VideoSubtitleWidget::surface()
+{
+    static VideoSurface* sl_surface = nullptr;
+    if (!sl_surface) {
+        sl_surface = new VideoSurface();
+        sl_surface->fn_newFrameAvaibleCallBack = [this](const QImage& a_imgFrame) {
+            qDebug() << "called" << "fn_newFrameAvaibleCallBack";
+            m_imgFrame = a_imgFrame;
+            updatePixmaps();
+        };
+    }
+    return sl_surface;
 }
 
 QImage makeSmoothTransparent(const QImage& a_image, QRgb a_backgroundColor, qint32 a_outline)
@@ -123,14 +203,26 @@ QImage VideoSubtitleWidget::generateSubtitleImage()
     return sl_txtPixmap;
 }
 
+void VideoSubtitleWidget::updatePixmaps()
+{
+    qDebug() << "VideoSubtitleWidget::updatePixmaps"
+             << "m_imgFrame.isNull()" << m_imgFrame.isNull();
+    m_lblVideo->setPixmap(QPixmap::fromImage(m_imgFrame));
+    m_lblSubTitle->setPixmap(QPixmap::fromImage(generateSubtitleImage()));
+}
+
 void VideoSubtitleWidget::resizeEvent(QResizeEvent* /*event*/)
 {
     if (!size().isValid()) return;
 
-    QRect l_rect = QRect(QPoint(0, 0), size() * 0.9);
+    QRect l_rect = QRect(QPoint(0, 0), size());
+    m_lblVideo->setGeometry(l_rect);
+    m_lblVideo->raise();
+
+    l_rect.setSize(0.9 * l_rect.size());
     l_rect.moveCenter(mapFromParent(geometry().center()));
-    qDebug() << l_rect;
     m_lblSubTitle->setGeometry(l_rect);
-    m_lblSubTitle->setPixmap(QPixmap::fromImage(generateSubtitleImage()));
     m_lblSubTitle->raise();
+
+    updatePixmaps();
 }

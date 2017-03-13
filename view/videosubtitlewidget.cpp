@@ -7,25 +7,19 @@
 
 VideoSubtitleWidget::VideoSubtitleWidget(QWidget *parent) : QVideoWidget(parent)
 {
-    m_lblSubTitle = new QLabel(this);
-    m_lblSubTitle->setStyleSheet("background-color: rgba(255, 150, 150, 150);");
+    m_lblSubTitle = new QLabel();
+    m_lblSubTitle->setStyleSheet("background:transparent;");
+    m_lblSubTitle->setFocusProxy(this);
+    m_lblSubTitle->setFrameShape(QFrame::NoFrame);
+    m_lblSubTitle->show();
+    m_lblSubTitle->raise();
+    m_lblSubTitle->setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
+    m_lblSubTitle->setAttribute(Qt::WA_TranslucentBackground);
+    QPalette pal = m_lblSubTitle->palette();
+    pal.setBrush(QPalette::Base, Qt::transparent);
+    m_lblSubTitle->setPalette(pal);
+    m_lblSubTitle->setWindowOpacity(0.99);
 }
-
-//void VideoSubtitleWidget::paintEvent(QPaintEvent* event)
-//{
-//    QVideoWidget::paintEvent(event);
-
-//    QImage l_image = generateSubtitleImage();
-//    QRect l_rectSource = QRect(QPoint(0, 0), l_image.size());
-//    QRect l_rectTarget = l_rectSource;
-
-//    l_rectTarget.setTop((height() - l_rectTarget.height()) / 2);
-//    l_rectTarget.setLeft((width() - l_rectTarget.width()) / 2);
-
-//    QPainter painter(this);
-//    painter.setRenderHint(QPainter::Antialiasing);
-//    painter.drawImage(l_rectTarget, l_image, l_rectSource);
-//}
 
 SubtitleItem VideoSubtitleWidget::currentSubtitleItem() const
 {
@@ -38,6 +32,8 @@ void VideoSubtitleWidget::setCurrentSubtitleItem(const SubtitleItem& currentSubt
         m_currentSubtitleItem = currentSubtitleItem;
         m_lblSubTitle->setPixmap(QPixmap::fromImage(generateSubtitleImage()));
     }
+    m_lblSubTitle->show();
+    m_lblSubTitle->stackUnder(this);
 //    update();
 }
 
@@ -109,6 +105,9 @@ QImage VideoSubtitleWidget::generateSubtitleImage()
             sl_cachedFont.setUnderline(m_currentSubtitleItem.isUnderline());
             l_painter.setFont(sl_cachedFont);
             l_painter.setPen(QColor(0, 0, 0));
+            QRect l_rectText = l_rect;
+            l_rectText.setSize(l_rect.size() * 0.7);
+            l_rectText.moveCenter(l_rect.center());
             l_painter.drawText(l_rect, Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom, m_currentSubtitleItem.text(false));
         } else {
             l_painter.fillRect(l_rect, Qt::transparent);
@@ -127,10 +126,9 @@ void VideoSubtitleWidget::resizeEvent(QResizeEvent* /*event*/)
 {
     if (!size().isValid()) return;
 
-    QRect l_rect = QRect(QPoint(0, 0), size() * 0.9);
-    l_rect.moveCenter(mapFromParent(geometry().center()));
-    qDebug() << l_rect;
+    QRect l_rect = QRect(QPoint(0, 0), size());
+    l_rect.moveCenter(mapToGlobal(geometry().center()));
     m_lblSubTitle->setGeometry(l_rect);
     m_lblSubTitle->setPixmap(QPixmap::fromImage(generateSubtitleImage()));
-    m_lblSubTitle->raise();
+    m_lblSubTitle->stackUnder(this);
 }

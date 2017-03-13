@@ -21,14 +21,18 @@ public:
     bool remove(const qint32& a_idx);
     bool replace(qint32 a_idx, const SubtitleItem& a_item);
 
-    SubtitleItem byTime(qint64 a_msec) const;
+    const SubtitleItem& at(qint32 a_idx) const;
+
+    SubtitleItem byTime(TimeStamp a_msec) const;
 
     const QList<SubtitleItem>& itens() const;
 
     bool changed() const;
 
-private:
-    qint32 idxByTime(qint64 a_msec) const;
+    enum class IdxType {
+        Exact, Near
+    };
+    qint32 idxByTime(TimeStamp a_msec, IdxType a_idxType = IdxType::Exact) const;
 
 signals:
     void itemAdded(qint32 a_idx, const SubtitleItem& a_item);

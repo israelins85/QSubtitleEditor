@@ -65,6 +65,8 @@ public:
     void setEnd(const TimeStamp& end);
     TimeStamp duration() const;
 
+    bool contains(const TimeStamp& time) const;
+
     enum class TextAtribute {
         None        = 0x00,
         Bold        = 0x01,

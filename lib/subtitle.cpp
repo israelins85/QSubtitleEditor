@@ -49,7 +49,12 @@ bool Subtitle::replace(qint32 a_idx, const SubtitleItem& a_item)
     return add(a_item);
 }
 
-SubtitleItem Subtitle::byTime(qint64 a_msec) const
+const SubtitleItem&Subtitle::at(qint32 a_idx) const
+{
+    return m_itens[a_idx];
+}
+
+SubtitleItem Subtitle::byTime(TimeStamp a_msec) const
 {
     qint32 l_idx = idxByTime(a_msec);
 
@@ -65,14 +70,26 @@ const QList<SubtitleItem>& Subtitle::itens() const
     return m_itens;
 }
 
-qint32 Subtitle::idxByTime(qint64 a_msec) const
+qint32 Subtitle::idxByTime(TimeStamp a_msec, IdxType a_idxType) const
 {
     qint32 l_idx = 0;
-    for (; l_idx < m_itens.size(); ++l_idx) {
-        const SubtitleItem& l_s = m_itens[l_idx];
-        if (l_s.start() > a_msec) break;
-        if (l_s.end() < a_msec) continue;
+
+    if (a_idxType == IdxType::Exact) {
+        for (; l_idx < m_itens.size(); ++l_idx) {
+            const SubtitleItem& l_s = m_itens[l_idx];
+            if (l_s.start() > a_msec) break;
+            if (l_s.end() < a_msec) continue;
+            return l_idx;
+        }
+    } else {
+        for (; l_idx < m_itens.size(); ++l_idx) {
+            const SubtitleItem& l_s = m_itens[l_idx];
+            if (l_s.contains(a_msec)) break;
+            if (l_s.start() > a_msec) break;
+        }
+
         return l_idx;
     }
+
     return -1;
 }

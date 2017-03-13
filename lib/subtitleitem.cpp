@@ -174,6 +174,11 @@ TimeStamp SubtitleItem::duration() const {
     return m_end - m_start;
 }
 
+bool SubtitleItem::contains(const TimeStamp& time) const
+{
+    return (m_start <= time) && (time < m_end);
+}
+
 QString SubtitleItem::text(bool withTags) const
 {
     QString l_ret = m_text;

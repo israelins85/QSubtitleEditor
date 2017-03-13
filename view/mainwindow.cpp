@@ -14,22 +14,20 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     m_mediaPlayer = new QMediaPlayer(this);
-    m_mediaPlayer->setVideoOutput(ui->wdgVideo->graphicsVideoItem());
+    m_mediaPlayer->setVideoOutput(ui->wdgVideo->videoOutput());
 
     connect(m_mediaPlayer, &QMediaPlayer::durationChanged, ui->sliProgress, [this](qint64 a_position) {
         ui->sliProgress->setMaximum(int(a_position / 1000));
-//        ui->wdgVideo->setMaximumSize(0, 0);
-//        QTimer::singleShot(100, this, [=]() {
-//            ui->wdgVideo->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-//        });
+        ui->wdgVideo->setMaximumSize(0, 0);
+        QTimer::singleShot(100, this, [=]() {
+            ui->wdgVideo->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        });
     });
 
     connect(m_mediaPlayer, &QMediaPlayer::positionChanged, ui->sliProgress, [this](qint64 a_position) {
         ui->sliProgress->blockSignals(true);
         ui->sliProgress->setValue(a_position / 1000);
         ui->sliProgress->blockSignals(false);
-
-        showSubtitleItem();
     });
 
     connect(ui->sliProgress, &QSlider::valueChanged, m_mediaPlayer, [this](qint32 a_value) {
@@ -91,6 +89,26 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&m_subTitle, &Subtitle::itensRemoved, this, [this]() {
         ui->tblSubtitles->setRowCount(0);
     });
+
+    m_timerForSyncSubtitle.setInterval(10);
+    connect(m_mediaPlayer, &QMediaPlayer::stateChanged, this, [this](QMediaPlayer::State newState) {
+        qDebug() << "QMediaPlayer::stateChanged" << newState;
+        if (newState == QMediaPlayer::PlayingState) {
+            m_timerForSyncSubtitle.start();
+        } else {
+            m_timerForSyncSubtitle.stop();
+        }
+    });
+
+    connect(&m_timerForSyncSubtitle, &QTimer::timeout, this, [this]() {
+        syncSubtitle(m_mediaPlayer->position());
+    });
+
+    connect(ui->tblSubtitles, &QTableWidget::currentCellChanged, this, [this](int currentRow, int /*currentColumn*/, int /*previousRow*/, int /*previousColumn*/) {
+        if (currentRow == m_curSubtitleIdx) return;
+        const SubtitleItem& l_sti = m_subTitle.at(currentRow);
+        m_mediaPlayer->setPosition(l_sti.start().value() - 10);
+    });
 }
 
 MainWindow::~MainWindow()
@@ -106,6 +124,7 @@ void MainWindow::on_actionOpen_triggered()
     QProgressDialog* l_dlg = new QProgressDialog(tr("Loading subtitle..."), tr("Abort Load"), 0, 10000, this);
     l_dlg->setWindowModality(Qt::WindowModal);
 
+    showSubtitleItem(SubtitleItem());
     m_subTitle.clear();
     SubtitleParser* l_parser = SubtitleParser::fromFile(&m_subTitle, l_file);
 
@@ -125,8 +144,8 @@ void MainWindow::on_actionOpen_triggered()
             if (!l_videoFile.isEmpty()) {
             qDebug() << QUrl::fromLocalFile(l_videoFile);
                 m_mediaPlayer->setMedia(QUrl::fromLocalFile(l_videoFile));
-                m_mediaPlayer->play();
-                m_mediaPlayer->pause();
+//                m_mediaPlayer->play();
+//                m_mediaPlayer->pause();
             }
         }
         l_parser->deleteLater();
@@ -159,17 +178,21 @@ void MainWindow::on_btnFoward_clicked()
     m_mediaPlayer->setPosition(m_mediaPlayer->position() + 10 * 1000);
 }
 
-void MainWindow::showSubtitleItem()
+void MainWindow::syncSubtitle(qint64 a_position)
 {
-    showSubtitleItem(m_subTitle.byTime(m_mediaPlayer->position()));
+    qint32 l_cur = m_subTitle.idxByTime(a_position, Subtitle::IdxType::Exact);
+    if (l_cur < 0) {
+        showSubtitleItem(SubtitleItem());
+    } else {
+        if (m_curSubtitleIdx != l_cur) {
+            m_curSubtitleIdx = l_cur;
+            ui->tblSubtitles->setCurrentCell(m_curSubtitleIdx, 0);
+        }
+        showSubtitleItem(m_subTitle.at(l_cur));
+    }
 }
 
 void MainWindow::showSubtitleItem(const SubtitleItem& a_item)
 {
     ui->wdgVideo->setCurrentSubtitleItem(a_item);
-}
-
-void MainWindow::resizeEvent(QResizeEvent* /*event*/)
-{
-    showSubtitleItem();
 }

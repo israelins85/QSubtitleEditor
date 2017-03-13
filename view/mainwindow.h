@@ -5,6 +5,7 @@
 
 #include <QMainWindow>
 #include <QMediaPlayer>
+#include <QTimer>
 
 namespace Ui {
     class MainWindow;
@@ -31,17 +32,15 @@ private slots:
     void on_btnFoward_clicked();
 
 private:
-    void showSubtitleItem();
+    void syncSubtitle(qint64 a_position);
     void showSubtitleItem(const SubtitleItem& a_item);
 
 private:
     Ui::MainWindow *ui;
     Subtitle m_subTitle;
     QMediaPlayer* m_mediaPlayer = nullptr;
-
-    // QWidget interface
-protected:
-    void resizeEvent(QResizeEvent* event);
+    qint32 m_curSubtitleIdx = -1;
+    QTimer m_timerForSyncSubtitle;
 };
 
 #endif // MAINWINDOW_H

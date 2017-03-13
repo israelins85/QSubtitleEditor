@@ -4,7 +4,9 @@
 #include <QPainter>
 #include <QEasingCurve>
 #include <QDebug>
+#include <QGraphicsTextItem>
 #include <QGraphicsVideoItem>
+#include <QGraphicsDropShadowEffect>
 
 VideoSubtitleWidget::VideoSubtitleWidget(QWidget *parent) : QGraphicsView(parent)
 {
@@ -26,107 +28,53 @@ void VideoSubtitleWidget::setCurrentSubtitleItem(const SubtitleItem& currentSubt
 {
     if (m_currentSubtitleItem != currentSubtitleItem) {
         m_currentSubtitleItem = currentSubtitleItem;
-//        m_lblSubTitle->setPixmap(QPixmap::fromImage(generateSubtitleImage()));
+        m_subtitleBottomOutput->setHtml("<center>" + m_currentSubtitleItem.text().replace("\n", "<br/>") + "</center>");
+        qDebug() << "showing" << m_currentSubtitleItem.start().value() << m_currentSubtitleItem.end().value() << m_currentSubtitleItem.text();
+        adjustSubtitleItem();
     }
-//    m_lblSubTitle->raise();
-    //    update();
 }
 
-QGraphicsVideoItem* VideoSubtitleWidget::graphicsVideoItem()
+QGraphicsVideoItem* VideoSubtitleWidget::videoOutput()
 {
-    return m_graphicsVideoItem;
+    return m_videoOutput;
 }
 
 void VideoSubtitleWidget::setupUi()
 {
-    m_graphicsScene = new QGraphicsScene(this);
-    m_graphicsVideoItem = new QGraphicsVideoItem;
-    m_graphicsVideoItem->setAspectRatioMode(Qt::KeepAspectRatio);
-    m_graphicsScene->addItem(m_graphicsVideoItem);
+    m_scene = new QGraphicsScene(this);
+    m_videoOutput = new QGraphicsVideoItem;
+    m_videoOutput->setAspectRatioMode(Qt::KeepAspectRatio);
+    m_scene->addItem(m_videoOutput);
+    m_subtitleBottomOutput = new QGraphicsTextItem(m_videoOutput);
 
-    setScene(m_graphicsScene);
+    QGraphicsDropShadowEffect* shadowEffect = new QGraphicsDropShadowEffect(this);
+    shadowEffect->setOffset(0, 0);
+    shadowEffect->setBlurRadius(3);
+    shadowEffect->setColor(QColor(Qt::black));
+
+    m_subtitleBottomOutput->setGraphicsEffect(shadowEffect);
+    m_subtitleBottomOutput->setDefaultTextColor(QColor(230, 230, 230));
+    m_subtitleBottomOutput->setFont(calculateBestFontSize());
+
+    setScene(m_scene);
 }
 
-QImage makeSmoothTransparent(const QImage& a_image, QRgb a_backgroundColor, qint32 a_outline)
+QFont VideoSubtitleWidget::calculateBestFontSize()
 {
-    QImage l_txtPixmapWOutLine = a_image;
-    QEasingCurve l_easingCurve(QEasingCurve::OutQuint);
-
-    for (int x = 0; x < a_image.width(); x++) {
-        for (int y = 0; y < a_image.height(); y++) {
-            QRgb l_rgb = a_image.pixel(x, y);
-            if (l_rgb != a_backgroundColor) continue;
-
-            qint32 l_minx2 = qMax(0, x - a_outline);
-            qint32 l_maxx2 = qMin(a_image.width(), x + a_outline + 1);
-            qint32 l_miny2 = qMax(0, y - a_outline);
-            qint32 l_maxy2 = qMin(a_image.height(), y + a_outline + 1);
-
-            qint32 l_pixels = 0;
-            qint32 l_eqPixels = 0;
-
-            for (int x2 = l_minx2; x2 < l_maxx2; x2++) {
-                for (int y2 = l_miny2; y2 < l_maxy2; y2++) {
-                    if ((x2 == x) && (y2 == y)) continue;
-                    ++l_pixels;
-                    QRgb l_rgb = a_image.pixel(x2, y2);
-                    if (l_rgb != a_backgroundColor) continue;
-                    ++l_eqPixels;
-                }
-            }
-
-            qreal l_p = l_easingCurve.valueForProgress(1.0 - (qreal(l_eqPixels) / qreal(l_pixels)));
-            l_rgb = qPremultiply(qRgba(qRed(l_rgb), qGreen(l_rgb), qBlue(l_rgb), 255 * l_p));
-            l_txtPixmapWOutLine.setPixel(x, y, l_rgb);
-        }
-    }
-
-    return l_txtPixmapWOutLine;
+    QFont l_font = font();
+    l_font.setPointSizeF(20);
+    return l_font;
 }
 
-QImage VideoSubtitleWidget::generateSubtitleImage()
+void VideoSubtitleWidget::adjustSubtitleItem()
 {
-    static QImage sl_txtPixmap;
-    static SubtitleItem sl_cachedItem;
-    static QFont sl_cachedFont;
+    m_subtitleBottomOutput->setTextWidth(width() - 10);
+    m_subtitleBottomOutput->adjustSize();
 
-    bool l_needRegenerate = ((m_currentSubtitleItem != sl_cachedItem) || (sl_txtPixmap.size() != size()));
-    if (l_needRegenerate) {
-        sl_cachedItem = m_currentSubtitleItem;
-        QRect l_rect = QRect(QPoint(0, 0), size());
+    qint32 l_x = (width() - m_subtitleBottomOutput->boundingRect().width()) / 2;
+    qint32 l_y = height() - m_subtitleBottomOutput->boundingRect().height() - 5;
 
-        if (sl_txtPixmap.size() != l_rect.size())
-            sl_txtPixmap = QImage(l_rect.size(), QImage::Format_ARGB32_Premultiplied);
-
-        QPainter l_painter;
-
-        sl_cachedFont = font();
-        if (sl_cachedFont.pointSizeF() < 0)
-            sl_cachedFont.setPointSize(sl_cachedFont.pixelSize() * 2);
-        else
-            sl_cachedFont.setPointSizeF(sl_cachedFont.pointSizeF() * 2);
-
-        l_painter.begin(&sl_txtPixmap);
-        if (!m_currentSubtitleItem.text().isEmpty()) {
-            l_painter.fillRect(l_rect, Qt::white);
-            l_painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
-            sl_cachedFont.setBold(m_currentSubtitleItem.isBold());
-            sl_cachedFont.setItalic(m_currentSubtitleItem.isItalic());
-            sl_cachedFont.setUnderline(m_currentSubtitleItem.isUnderline());
-            l_painter.setFont(sl_cachedFont);
-            l_painter.setPen(QColor(0, 0, 0));
-            l_painter.drawText(l_rect, Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom, m_currentSubtitleItem.text(false));
-        } else {
-            l_painter.fillRect(l_rect, Qt::transparent);
-        }
-        l_painter.end();
-
-        if (!m_currentSubtitleItem.text().isEmpty()) {
-            sl_txtPixmap = makeSmoothTransparent(sl_txtPixmap, qRgb(255, 255, 255), 2);
-        }
-    }
-
-    return sl_txtPixmap;
+    m_subtitleBottomOutput->setPos(l_x, l_y);
 }
 
 void VideoSubtitleWidget::resizeEvent(QResizeEvent* /*event*/)
@@ -134,5 +82,9 @@ void VideoSubtitleWidget::resizeEvent(QResizeEvent* /*event*/)
     if (!size().isValid()) return;
 
     setSceneRect(QRect(QPoint(0, 0), size()));
-    m_graphicsVideoItem->setSize(size());
+    centerOn(m_videoOutput);
+    m_videoOutput->setSize(size());
+
+    m_subtitleBottomOutput->setFont(calculateBestFontSize());
+    adjustSubtitleItem();
 }

@@ -15,17 +15,18 @@ public:
     SubtitleItem currentSubtitleItem() const;
     void setCurrentSubtitleItem(const SubtitleItem& currentSubtitleItem);
 
-    QGraphicsVideoItem* graphicsVideoItem();
+    QGraphicsVideoItem* videoOutput();
 
 private:
     void setupUi();
-
-    QImage generateSubtitleImage();
+    QFont calculateBestFontSize();
+    void adjustSubtitleItem();
 
 private:
     SubtitleItem m_currentSubtitleItem;
-    QGraphicsScene* m_graphicsScene = nullptr;
-    QGraphicsVideoItem* m_graphicsVideoItem = nullptr;
+    QGraphicsScene* m_scene = nullptr;
+    QGraphicsVideoItem* m_videoOutput = nullptr;
+    QGraphicsTextItem* m_subtitleBottomOutput = nullptr;
 
     // QWidget interface
 protected:
